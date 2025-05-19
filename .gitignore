@@ -1,0 +1,34 @@
+# Dependências
+/node_modules/
+
+# Compilados TypeScript
+/dist/
+/build/
+/coverage/
+
+# Arquivos de log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs e editores
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Sistemas operacionais
+.DS_Store
+Thumbs.db
+
+# Ambiente
+.env
+.env.*
+
+# Arquivos de lock (ignorar o package-lock.json conforme solicitado)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
