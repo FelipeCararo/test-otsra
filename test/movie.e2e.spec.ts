@@ -1,31 +1,40 @@
-import request from "supertest";
-import { createApp } from "../src/app";
+import { importCsv, CsvFormatError } from "../src/csv-importer";
 import { AppDataSource } from "../src/db";
-import { Movie } from "../src/entities/Movie";
-import { calculateIntervals } from "../src/services/interval.service";
+import { createApp } from "../src/app";
+import request from "supertest";
 
-beforeAll(async () => {
-  await AppDataSource.initialize();
-  await AppDataSource.manager.save(
-    AppDataSource.manager.create(Movie, [
-      { year: 2000, title: "Foo", producers: "A", winner: true },
-      { year: 2005, title: "Bar", producers: "A", winner: true },
-      { year: 2001, title: "Baz", producers: "B", winner: true },
-      { year: 2010, title: "Qux", producers: "B", winner: true },
-    ])
-  );
+describe("CSV válido", () => {
+  beforeAll(async () => {
+    await AppDataSource.initialize();
+    await importCsv("csv/Movielist.csv", AppDataSource);
+  });
+  afterAll(() => AppDataSource.destroy());
+
+  it("Deve retornar os dados da API baseado no CSV correto com sucesso", async () => {
+    const res = await request(createApp()).get("/producers/intervals");
+    expect(res.status).toBe(200);
+  });
 });
 
-afterAll(() => AppDataSource.destroy());
+describe("CSV inválido (coluna ausente)", () => {
+  let csvErr!: CsvFormatError;
 
-const app = createApp();
+  beforeAll(async () => {
+    await AppDataSource.initialize();
+    await expect(
+      importCsv("csv/Movielist-fail.csv", AppDataSource)
+    ).rejects.toThrow(CsvFormatError);
+    try {
+      await importCsv("csv/Movielist-fail.csv", AppDataSource);
+    } catch (e) {
+      csvErr = e as CsvFormatError;
+    }
+  });
+  afterAll(() => AppDataSource.destroy());
 
-describe("GET /producers/intervals", () => {
-  it("deve retornar os intervalos mínimos e máximos corretos", async () => {
-    const res = await request(app).get("/producers/intervals");
-    expect(res.status).toBe(200);
-
-    // serviço e rota devem concordar
-    expect(res.body).toEqual(await calculateIntervals());
+  it("Deve retornar erro 500 com mensagem", async () => {
+    const res = await request(createApp(csvErr)).get("/producers/intervals");
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: csvErr.message });
   });
 });
